@@ -1,0 +1,219 @@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+const TOTAL = 10;
+let cur = 0, cdTimer = null, noCount = 0;
+
+/* ── cursor ── */
+const cursor = document.getElementById('cursor');
+const trail  = document.getElementById('cursor-trail');
+let mx=0,my=0,tx=0,ty=0;
+
+document.addEventListener('mousemove', e => {
+  mx=e.clientX; my=e.clientY;
+  cursor.style.left=mx+'px';
+  cursor.style.top=my+'px';
+});
+
+setInterval(()=>{
+  tx+=(mx-tx)*0.18;
+  ty+=(my-ty)*0.18;
+  trail.style.left=tx+'px';
+  trail.style.top=ty+'px';
+},16);
+
+/* ── stars ── */
+const sf = document.getElementById('starfield');
+
+for(let i=0;i<120;i++){
+  const el=document.createElement('div');
+  el.className='s';
+  const sz=Math.random()*2.2+0.5;
+  el.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${(Math.random()*3+1.5).toFixed(1)}s;--dl:${(Math.random()*5).toFixed(1)}s;`;
+  sf.appendChild(el);
+}
+
+for(let i=0;i<4;i++){
+  const sh=document.createElement('div');
+  sh.className='shoot';
+  sh.style.cssText=`--sy:${Math.random()*40}%;--sx:${Math.random()*60}%;--sd:${(Math.random()*5+5).toFixed(1)}s;--sdl:${(Math.random()*8).toFixed(1)}s;`;
+  sf.appendChild(sh);
+}
+
+/* ── dots ── */
+const dotsEl=document.getElementById('dots');
+
+for(let i=0;i<TOTAL;i++){
+  const d=document.createElement('div');
+  d.className='dot'+(i===0?' on':'');
+  d.onclick=()=>goTo(i);
+  dotsEl.appendChild(d);
+}
+
+/* ── progress ── */
+function updateProg(){
+  document.getElementById('prog').style.width=((cur/(TOTAL-1))*100)+'%';
+}
+updateProg();
+
+/* ── goTo ── */
+function goTo(idx){
+  if(idx<0||idx>=TOTAL)return;
+
+  if(cdTimer){
+    clearInterval(cdTimer);
+    cdTimer=null;
+  }
+
+  document.getElementById('card-'+cur).classList.remove('active');
+  cur=idx;
+
+  const card=document.getElementById('card-'+cur);
+  card.classList.add('active');
+
+  card.style.animation='none';
+  void card.offsetWidth;
+  card.style.animation='';
+
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===cur));
+
+  document.getElementById('prevBtn').disabled=cur===0;
+  document.getElementById('nextBtn').disabled=cur===TOTAL-1;
+
+  updateProg();
+
+  if(cur===7) startCountdown();
+  if(cur===8){ clearHearts(); spawnHearts(18); }
+}
+
+function go(d){ goTo(cur+d); }
+
+/* ── countdown ── */
+function startCountdown(){
+  let n=3;
+  const el=document.getElementById('cdNum');
+  const sub=document.getElementById('cdSub');
+
+  const labels=['Get ready…','Almost…','Here it comes…'];
+
+  el.textContent=n;
+  sub.textContent=labels[0];
+
+  cdTimer=setInterval(()=>{
+    n--;
+    if(n<=0){
+      clearInterval(cdTimer);
+      cdTimer=null;
+      goTo(8);
+      return;
+    }
+
+    el.style.animation='none';
+    void el.offsetWidth;
+    el.style.animation='cdPop 0.5s cubic-bezier(0.22,1,0.36,1)';
+
+    el.textContent=n;
+    sub.textContent=labels[3-n]||'';
+  },1000);
+}
+
+/* ── hearts ── */
+const hCanvas=document.getElementById('heartCanvas');
+
+function clearHearts(){
+  hCanvas.innerHTML='';
+}
+
+function spawnHearts(count){
+  const emojis=['💙','🩵','✨','🐧','💫','💍','🌟','🌸'];
+
+  for(let i=0;i<count;i++){
+    setTimeout(()=>{
+      const h=document.createElement('div');
+      h.className='fh';
+      h.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+
+      h.style.left=Math.random()*94+'%';
+      h.style.setProperty('--fs',(Math.random()*1.6+0.8)+'rem');
+      h.style.setProperty('--fd',(Math.random()*3+3.5)+'s');
+      h.style.setProperty('--fr',(Math.random()*30-15)+'deg');
+      h.style.animationDelay=(Math.random()*1.5)+'s';
+
+      hCanvas.appendChild(h);
+      setTimeout(()=>h.remove(),8000);
+    },i*180);
+  }
+}
+
+/* ── YES ── */
+window.sayYes = function(){
+  clearHearts();
+  spawnHearts(30);
+
+  const c=document.getElementById('card-8');
+
+  c.innerHTML=`
+    <div class="yes-screen" style="text-align:center;width:100%">
+      <div class="icon bounce" style="font-size:4rem;margin-bottom:1rem">🐧💙</div>
+      <div class="proposal-name">She said YES! 🎉</div>
+      <div class="divider"></div>
+      <div class="sub">
+        I am the happiest person alive right now.<br><br>
+        <em>You're my Fluffy Penguin, forever.</em> 💍
+      </div>
+      <div class="sig">— Rishav 🐧💙</div>
+    </div>`;
+
+  setTimeout(()=>spawnHearts(20),1600);
+  setTimeout(()=>spawnHearts(15),3200);
+};
+
+/* ── NO (runs away) ── */
+const noMsgs=['Are you sure? 🥺','Please?? 🐧','Noooo 💔','Come on... 😢','Just say yes 🙏','I'll wait forever 💙','...Pleaseee 🥹'];
+
+window.runAway = function(btn){
+  noCount++;
+
+  btn.textContent=noMsgs[Math.min(noCount-1,noMsgs.length-1)];
+
+  const xd=(Math.random()>0.5?1:-1)*(Math.random()*100+60);
+  const yd=(Math.random()>0.5?1:-1)*(Math.random()*50+20);
+
+  btn.style.transition='transform 0.3s cubic-bezier(0.22,1,0.36,1)';
+  btn.style.transform=`translate(${xd}px,${yd}px)`;
+
+  setTimeout(()=>{ btn.style.transform='translate(0,0)'; },500);
+
+  if(noCount>=5){
+    btn.disabled=true;
+    btn.style.opacity='0.1';
+  }
+};
+
+/* ── keyboard ── */
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' ') go(1);
+  if(e.key==='ArrowLeft') go(-1);
+});
+
+/* ── swipe ── */
+let ts=null;
+
+document.addEventListener('touchstart',e=>{
+  ts=e.touches[0].clientX;
+});
+
+document.addEventListener('touchend',e=>{
+  if(ts===null)return;
+
+  const dx=e.changedTouches[0].clientX-ts;
+
+  if(Math.abs(dx)>50){
+    go(dx<0?1:-1);
+  }
+
+  ts=null;
+});
+
+});
+</script>
